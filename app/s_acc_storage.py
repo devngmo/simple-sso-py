@@ -18,3 +18,6 @@ class AccountStorageService():
         print(query)
         print('Account Storage Service: find one: %s' % json.dumps(query))
         return self.storageProvider.findOne('accounts_%s' % client_id, query)
+
+    def getAll(self, client_id):
+        return self.storageProvider.getAll('accounts_%s' % client_id)
