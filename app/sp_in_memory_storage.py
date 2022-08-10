@@ -35,15 +35,21 @@ class InMemoryStorageProvider(CollectionStorageProvider):
 
         for docID in self.collections[collectionID]:
             match = True
-            for k in query.keys():
-                doc = self.collections[collectionID][docID]
-                if k == '_id':
-                    if docID != query['_id']:
+            doc = self.collections[collectionID][docID]
+            try:
+                for k in query.keys():
+                    if k == '_id':
+                        if docID != query['_id']:
+                            match = False
+                            continue
+                    elif doc[k] != query[k]:
                         match = False
                         continue
-                elif doc[k] != query[k]:
-                    match = False
-                    continue
+            except Exception as ex:
+                print('Exception when compare with:')
+                print(doc)
+                print(ex)
+                match = False
             if match:
                 return doc
         return None
