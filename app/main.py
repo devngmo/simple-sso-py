@@ -1,11 +1,12 @@
 import os, sys, json
 
-from . import defs
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(APP_DIR)
+
+import defs
 from models import account
 from fastapi import FastAPI, Request
 
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(APP_DIR)
 
 API_ENDPOINT_EMAIL_CONFIRM = os.environ['API_ENDPOINT_EMAIL_CONFIRM']
 
