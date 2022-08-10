@@ -1,5 +1,6 @@
-import os, sys, defs, utils, json
+import os, sys, utils, json
 
+from . import defs
 from models import account
 from typing import Union
 from fastapi import FastAPI, Request
