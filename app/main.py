@@ -81,5 +81,5 @@ def login(model: LoginModel):
 
 @app.post("/token/verify/{token}")
 def login(token):
-    return tokenRepo.get(token) != None
+    return tokenRepo.get(token)
 
