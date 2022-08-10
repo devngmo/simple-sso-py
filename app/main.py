@@ -37,8 +37,8 @@ tokenStorageService = TokenStorageService(docStorageProvider)
 tokenRepo = TokenRepository(tokenStorageService)
 authService = AutheticationService(accRepo, tokenRepo)
 
-GMAIL_ACCOUNT = os.environ('GMAIL_ACCOUNT')
-GMAIL_APP_PASSWORD = os.environ('GMAIL_APP_PASSWORD')
+GMAIL_ACCOUNT = os.environ['GMAIL_ACCOUNT']
+GMAIL_APP_PASSWORD = os.environ['GMAIL_APP_PASSWORD']
 emailService = ServiceFactory().createGmailService(GMAIL_ACCOUNT, GMAIL_APP_PASSWORD, GMAIL_ACCOUNT)
 registrationValidator = RegistrationValidator(accRepo, tokenRepo, emailService)
 print('=============================')
