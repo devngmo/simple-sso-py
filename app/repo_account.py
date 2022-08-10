@@ -36,3 +36,5 @@ class AccountRepository():
         print('Account Repository: find by ID: %s' % id)
         return self.storateService.findOne(client_id, {'_id' : id})
 
+    def getAll(self, client_id):
+        return self.storateService.getAll(client_id)
