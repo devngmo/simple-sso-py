@@ -28,7 +28,7 @@ class SignInService():
         elif acc['activated'] == False:
             raise HTTPException(status_code=403, detail="you can not login with inactivated account")
 
-        publicInfo = acc
+        publicInfo = acc.copy()
         del publicInfo['passhash']
         del publicInfo['activated']
 
