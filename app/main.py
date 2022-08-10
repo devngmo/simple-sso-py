@@ -7,9 +7,7 @@ import uuid
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(APP_DIR)
 sys.path.append(os.path.dirname(APP_DIR))
-
-print(__package__)
-
+ 
 import defs
 from models import account
 from fastapi import FastAPI, Request, Depends, Form, Header, HTTPException
@@ -30,6 +28,7 @@ from registration_validator import RegistrationValidator
 app = FastAPI()
 
 
+ADMIN_APIKEY = os.environ['ADMIN_APIKEY']
 API_ENDPOINT_EMAIL_CONFIRM = os.environ['API_ENDPOINT_EMAIL_CONFIRM']
 
 docStorageProvider = InMemoryStorageProvider()
@@ -142,8 +141,27 @@ def token_verify(token, client_id: str = Header()):
 
     return metadata
 
+@app.put("oauth2/client/{id}/{secret}")
+def oauth2_add_client(id, secret, apikey: str = Header()):
+    if apikey != ADMIN_APIKEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    clientRepo.add(id, secret)
+    return 'ok'
+
+@app.put("oauth2/clients")
+def oauth2_get_clients(apikey: str = Header()):
+    if apikey != ADMIN_APIKEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return clientRepo.getAll()
+
+
 @app.get('/dev/accounts')
-def get_all_accounts(client_id:str = Header()):
+def get_all_accounts(client_id:str = Header(), apikey: str = Header()):
+    if apikey != ADMIN_APIKEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     if client_id == None:
         raise HTTPException(status_code=400, detail="client_id not exists in headers")
     

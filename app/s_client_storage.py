@@ -14,3 +14,6 @@ class OauthClientStorageService():
 
     def findByID(self, clientID):
         return self.storageProvider.findOne('oauth_clients', {'_id': clientID })
+
+    def getAll(self):
+        return self.storageProvider.getAll('oauth_clients')
