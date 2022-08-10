@@ -130,7 +130,7 @@ def oauth2_token(authorization:str = Header(), grant_type: str = Form(), usernam
     
 
 
-@app.get("oauth2/token/verify/{token}")
+@app.get("/oauth2/token/verify/{token}")
 def token_verify(token, client_id: str = Header()):
     if client_id == None:
         raise HTTPException(status_code=400, detail="client_id not exists in headers")
@@ -141,7 +141,7 @@ def token_verify(token, client_id: str = Header()):
 
     return metadata
 
-@app.put("oauth2/client/{id}/{secret}")
+@app.put("/oauth2/client/{id}/{secret}")
 def oauth2_add_client(id, secret, apikey: str = Header()):
     if apikey != ADMIN_APIKEY:
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -149,7 +149,7 @@ def oauth2_add_client(id, secret, apikey: str = Header()):
     clientRepo.add(id, secret)
     return 'ok'
 
-@app.get("oauth2/clients")
+@app.get("/oauth2/clients")
 def oauth2_get_clients(apikey: str = Header()):
     if apikey != ADMIN_APIKEY:
         raise HTTPException(status_code=403, detail="Forbidden")
