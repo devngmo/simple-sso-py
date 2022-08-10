@@ -28,8 +28,8 @@ class RegistrationValidator():
         print('[RegistrationValidator] Account %s was ACTIVATED' % acc['id'])
         return ValidateConfirmCodeResult(errorCode=defs.ERRCODE_NONE)
     
-    def sendValidateEmail(self, account : ModelAccount.Account, token):
-        url = 'http://localhost:8000/register/validate/{token}'.format(token=token)
+    def sendValidateEmail(self, account : ModelAccount.Account, token, endpoint):
+        url = '{endpoint}/register/validate/{token}'.format(endpoint=endpoint, token=token)
         html = """
         <h1>SSO Registration Confirm</h1>
         <a href="{url}">{url}</a>

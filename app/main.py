@@ -2,11 +2,13 @@ import os, sys, defs, utils, json
 
 from models import account
 from typing import Union
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(APP_DIR)
+
+API_ENDPOINT_EMAIL_CONFIRM = os.environ['API_ENDPOINT_EMAIL_CONFIRM']
 
 print(__package__)
 
@@ -41,17 +43,17 @@ print('=============================')
 
 
 @app.get("/")
-def welcome():
+def welcome(request:Request):
     return 'welcome to Simple SSO'
 
 @app.post("/register")
-def register(model: account.RegistrationModel):
+def register(model: account.RegistrationModel, request: Request):
     print('API [/register]')
     acc = account.fromRegistrationModel(model)
     result = accRepo.registerNewAccount(acc)
     if result.errCode == defs.ERRCODE_NONE:
         token = tokenRepo.createToken({ 'id': acc.id, 'type':'registration-confirm-token' })
-        registrationValidator.sendValidateEmail(acc, token)
+        registrationValidator.sendValidateEmail(acc, token, API_ENDPOINT_EMAIL_CONFIRM)
 
         result = { 'errCode': defs.ERRCODE_NONE }
         print('register result: %s' % json.dumps(result))
