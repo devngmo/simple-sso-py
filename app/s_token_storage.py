@@ -10,3 +10,9 @@ class TokenStorageService():
 
     def get(self, token):
         return self.storageProvider.findOne('tokens', {'_id': token})
+
+    def addClientToken(self, client_id, token, metadata):
+        return self.storageProvider.addDocument('tokens_%s' % client_id, token, metadata)
+
+    def getClientToken(self, client_id, token):
+        return self.storageProvider.findOne('tokens_%s' % client_id, {'_id': token})

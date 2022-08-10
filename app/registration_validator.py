@@ -22,9 +22,10 @@ class RegistrationValidator():
             return ValidateConfirmCodeResult(errorCode=defs.ERRCODE_CONFIRM_LINK_EXPIRED)
 
         accID = metadata['id']
-        acc = self.accRepo.finByID(accID)
+        client_id = metadata['client_id']
+        acc = self.accRepo.finByID(client_id, accID)
         acc['activated'] = True
-        self.accRepo.updateAccount(acc)
+        self.accRepo.updateAccount(client_id, acc)
         print('[RegistrationValidator] Account %s was ACTIVATED' % acc['id'])
         return ValidateConfirmCodeResult(errorCode=defs.ERRCODE_NONE)
     

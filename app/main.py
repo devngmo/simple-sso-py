@@ -12,7 +12,7 @@ print(__package__)
 
 import defs
 from models import account
-from fastapi import FastAPI, Request, Depends, Form
+from fastapi import FastAPI, Request, Depends, Form, Header
 
 from s_client_storage import OauthClientStorageService
 from s_oauth2 import Oauth2
@@ -62,12 +62,15 @@ def welcome(request:Request):
     return 'welcome to Simple SSO'
 
 @app.post("/register")
-def register(model: account.RegistrationModel, request: Request):
+def register(model: account.RegistrationModel, client_id: str = Header()):
     print('API [/register]')
+    if client_id == None:
+        raise HTTPException(status_code=400, detail="client_id not exists in headers")
+    
     acc = account.fromRegistrationModel(model)
-    result = accRepo.registerNewAccount(acc)
+    result = accRepo.registerNewAccount(client_id, acc)
     if result.errCode == defs.ERRCODE_NONE:
-        token = tokenRepo.createToken({ 'id': acc.id, 'type':'registration-confirm-token' })
+        token = tokenRepo.createToken({'client_id':client_id, 'id': acc.id, 'type':'registration-confirm-token' })
         registrationValidator.sendValidateEmail(acc, token, API_ENDPOINT_EMAIL_CONFIRM)
 
         result = { 'errCode': defs.ERRCODE_NONE }
@@ -82,22 +85,20 @@ def register(model: account.RegistrationModel, request: Request):
 #     return model
 
 @app.get("/register/validate/{token}")
-def register(token):
+def register_validate_token(token):
     result = registrationValidator.validateConfirmCode(token)
     print('[register/validate/%s] result: %s' % (token, json.dumps(result.__dict__)))
     return result
 
 @app.post("/login")
-def login(model: LoginModel, request:Request):
-    client_id = request.headers.get('client_id')
+def login(model: LoginModel, client_id: str = Header()):
     if client_id == None:
         raise HTTPException(status_code=400, detail="client_id not exists in headers")
 
-    return signInService.login(client_id, model)
+    return signInService.signIn(client_id, model)
 
 @app.post("/token/verify/{token}")
-def token_verify(token, request:Request):
-    client_id = request.headers.get('client_id')
+def token_verify(token, client_id: str = Header()):
     if client_id == None:
         raise HTTPException(status_code=400, detail="client_id not exists in headers")
 
@@ -105,27 +106,38 @@ def token_verify(token, request:Request):
     if metadata == None:
         raise HTTPException(status_code=404, detail="Token not found")
 
-    if metadata['client_id'] == request.headers.get('client_id'):
+    if metadata['client_id'] == client_id:
         return metadata
     
     raise HTTPException(status_code=404, detail="Token not found")
 
 @app.post("/oauth2/token")
-def oauth2_token(request:Request, grant_type: str = Form(), username:str = Form(), password: str = Form()):
-    auth = request.headers.get('authorization')
-    if auth == None:
+def oauth2_token(authorization:str = Header(), grant_type: str = Form(), username:str = Form(), password: str = Form()):
+    if authorization == None:
         raise HTTPException(status_code=400, detail="Missing authorization in header")
 
-    if not auth.startswith('Basic '):
+    if not authorization.startswith('Basic '):
         raise HTTPException(status_code=400, detail="Not support authorization=%s in header" % auth)
 
-    auth = auth[6:]
-    client_parts = base64.b64decode(auth).decode('utf-8').split(':')
+    authorization = authorization[6:]
+    client_parts = base64.b64decode(authorization).decode('utf-8').split(':')
     client_id = client_parts[0]
     client_secret = client_parts[1]
     
     if not oauthService.isClientValid(client_id, client_secret):
         raise HTTPException(status_code=400, detail="Invalid client authorization")
     
-    return signInService.login(client_id, LoginModel(username, password))
+    return signInService.signIn(client_id, LoginModel(username, password))
     
+
+
+@app.post("oauth2/token/verify/{token}")
+def token_verify(token, client_id: str = Header()):
+    if client_id == None:
+        raise HTTPException(status_code=400, detail="client_id not exists in headers")
+
+    metadata = tokenRepo.getClientToken(client_id, token)
+    if metadata == None:
+        raise HTTPException(status_code=404, detail="Token not found")
+
+    return metadata
