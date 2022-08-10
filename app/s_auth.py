@@ -1,9 +1,6 @@
-import datetime
-#from ..repositories.account_repo import AccountRepository
-#from ..repositories.token_repo import TokenRepository
-# from ..models import account
+import datetime, utils
 from pydantic import BaseModel
-
+from models import account as ModelAccount
 class LoginModel(BaseModel):
     emailOrPhone: str
     password: str
@@ -14,8 +11,7 @@ class AutheticationService():
         self.tokenRepo = tokenRepo
 
     def login(self, loginModel):
-        from .. import utils
-        passhash = account.createPasshash(loginModel.password)
+        passhash = ModelAccount.createPasshash(loginModel.password)
         result = None
         if utils.isValidEmailAddress(loginModel.emailOrPhone):
             result = self.accountRepo.findByMail(loginModel.emailOrPhone, passhash)
