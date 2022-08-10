@@ -1,5 +1,5 @@
 import base64
-from http.client import HTTPException
+
 import os, sys, json
 import uuid
 
@@ -12,7 +12,7 @@ print(__package__)
 
 import defs
 from models import account
-from fastapi import FastAPI, Request, Depends, Form, Header
+from fastapi import FastAPI, Request, Depends, Form, Header, HTTPException
 
 from s_client_storage import OauthClientStorageService
 from s_oauth2 import Oauth2

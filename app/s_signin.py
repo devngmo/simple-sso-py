@@ -1,10 +1,10 @@
 import datetime, utils
-from http.client import HTTPException
+
 from pydantic import BaseModel
 from models import account as ModelAccount
 from repo_token import TokenRepository
 from repo_account import AccountRepository
-
+from fastapi import HTTPException
 class LoginModel(BaseModel):
     emailOrPhone: str
     password: str
