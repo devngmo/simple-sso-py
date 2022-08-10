@@ -69,10 +69,10 @@ def register(model: account.RegistrationModel, request: Request):
 # def register(model: account.RegistrationFormPhone):
 #     return model
 
-@app.get("/register/validate/{code}")
-def register(code):
-    result = registrationValidator.validateConfirmCode(code)
-    print('[register/validate/%s] result: %s' % (code, json.dumps(result.__dict__)))
+@app.get("/register/validate/{token}")
+def register(token):
+    result = registrationValidator.validateConfirmCode(token)
+    print('[register/validate/%s] result: %s' % (token, json.dumps(result.__dict__)))
     return result
 
 @app.post("/login")
