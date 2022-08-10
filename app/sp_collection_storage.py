@@ -12,3 +12,6 @@ class CollectionStorageProvider():
 
     def findOne(self, collectionID, query):
         return None
+
+    def getAll(self, collectionID):
+        return []
