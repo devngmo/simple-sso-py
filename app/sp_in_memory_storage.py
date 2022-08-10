@@ -6,6 +6,11 @@ class InMemoryStorageProvider(CollectionStorageProvider):
     def __init__(self):
         self.collections = {}
 
+    def getAll(self, collectionID):
+        if collectionID in self.collections:
+            return self.collections[collectionID]
+        return []
+
     def addDocument(self, collectionID, id, doc):
         if collectionID in self.collections:
             self.collections[collectionID][id] = doc
