@@ -1,10 +1,8 @@
-import os, sys, utils, json
+import os, sys, json
 
 from . import defs
 from models import account
-from typing import Union
 from fastapi import FastAPI, Request
-from pydantic import BaseModel
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(APP_DIR)
