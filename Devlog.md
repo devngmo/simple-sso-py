@@ -21,15 +21,15 @@ To run as a production server
 pip install uvicorn[standard]
 ```
 
-## create sample apis:
-- [/]: return text 'welcome'
-- [/object/__{category}__]: return a Json model of basic information for an object in __category__
+## create api for register:
+- [/register]: accept body as RegistrationModel, send confirm email to user.
+- [/register/validate/{token}]: validate token ( when user click on confirm link in email ) and activate account if token not expired.
 
 ## first run:
 - Run web api with command:
-```python -m uvicorn main:app```
+    - exec file: ```run.bat```
 
-- Open browser with url: (http://localhost:8000/docs)[http://localhost:8000/docs]
+- Open browser with url: (http://localhost:8000/docs)[http://127.0.0.1:8000/docs]
 
 ## release version 0.0.1
 
