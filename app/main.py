@@ -97,7 +97,7 @@ def login(model: LoginModel, client_id: str = Header()):
 
     return signInService.signIn(client_id, model)
 
-@app.post("/token/verify/{token}")
+@app.get("/token/verify/{token}")
 def token_verify(token, client_id: str = Header()):
     if client_id == None:
         raise HTTPException(status_code=400, detail="client_id not exists in headers")
@@ -131,7 +131,7 @@ def oauth2_token(authorization:str = Header(), grant_type: str = Form(), usernam
     
 
 
-@app.post("oauth2/token/verify/{token}")
+@app.get("oauth2/token/verify/{token}")
 def token_verify(token, client_id: str = Header()):
     if client_id == None:
         raise HTTPException(status_code=400, detail="client_id not exists in headers")
@@ -141,3 +141,10 @@ def token_verify(token, client_id: str = Header()):
         raise HTTPException(status_code=404, detail="Token not found")
 
     return metadata
+
+@app.get('/dev/accounts')
+def get_all_accounts(client_id:str = Header()):
+    if client_id == None:
+        raise HTTPException(status_code=400, detail="client_id not exists in headers")
+    
+    return accRepo.getAll(client_id)
