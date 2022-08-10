@@ -151,7 +151,7 @@ def oauth2_token(authorization:str = Header(), grant_type: str = Form(), usernam
     if not oauthService.isClientValid(client_id, client_secret):
         raise HTTPException(status_code=400, detail="Invalid client authorization")
     
-    return signInService.signIn(client_id, LoginModel(username, password))
+    return signInService.signIn(client_id, LoginModel(emailOrPhone=username, password=password))
     
 
 
