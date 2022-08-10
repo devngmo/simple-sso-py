@@ -17,3 +17,6 @@ class OauthClientRepository():
 
     def find(self, clientID, clientSecret):
         return self.clientStorage.find(clientID, clientSecret)
+
+    def getAll(self):
+        return self.clientStorage.getAll()
