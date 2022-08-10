@@ -22,6 +22,10 @@ class AutheticationService():
         elif result['activated'] == False:
             return { 'errCode': 2, 'msg': 'Account was not activated yet' }
 
-        loginSession = { 'info': result, 'ttl': 60*60, 'expire': datetime.datetime.now() + datetime.timedelta(hours=1) }
+        publicInfo = result
+        del publicInfo['passhash']
+        del publicInfo['activated']
+
+        loginSession = { 'info': publicInfo, 'ttl': 60*60, 'expire': datetime.datetime.now() + datetime.timedelta(hours=1) }
         token = self.tokenRepo.createToken( loginSession )
         return { 'errCode': 0, 'token': token }
