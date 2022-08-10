@@ -1,15 +1,16 @@
 import uuid
-# from ..providers.collection_storage_provider import CollectionStorageProvider
+
+from s_token_storage import TokenStorageService
 
 class TokenRepository():
-    def __init__(self, tokenStorage):
+    def __init__(self, tokenStorage: TokenStorageService):
         self.tokenStorage = tokenStorage
 
     def add(self, token, metadata):
-        self.tokenStorage.addDocument('tokens', token, metadata)
+        self.tokenStorage.addToken(token, metadata)
 
     def get(self, token):
-        return self.tokenStorage.findOne({'_id': token})
+        return self.tokenStorage.get(token)
 
     def createToken(self, metadata):
         token = uuid.uuid4().hex

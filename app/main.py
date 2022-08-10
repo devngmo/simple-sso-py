@@ -1,4 +1,5 @@
-import os, sys, defs, utils
+import os, sys, defs, utils, json
+
 from models import account
 from typing import Union
 from fastapi import FastAPI
@@ -9,14 +10,14 @@ sys.path.append(APP_DIR)
 
 print(__package__)
 
-from providers.gmail import GMailServiceProvider
-from services.mail import EmailService
-from services.token_storage_service import TokenStorageService
-from providers.in_memory_storage_provider import InMemoryStorageProvider
-from services.auth import AutheticationService, LoginModel
-from services.acc_storage_service import AccountStorageService
-from repositories.account_repo import AccountRepository
-from repositories.token_repo import TokenRepository
+from s_factory import ServiceFactory
+from s_mail import EmailService
+from s_token_storage import TokenStorageService
+from sp_in_memory_storage import InMemoryStorageProvider
+from s_auth import AutheticationService, LoginModel
+from s_acc_storage import AccountStorageService
+from repo_account import AccountRepository
+from repo_token import TokenRepository
 
 from registration_validator import RegistrationValidator
 
@@ -31,7 +32,7 @@ tokenStorageService = TokenStorageService(docStorageProvider)
 tokenRepo = TokenRepository(tokenStorageService)
 authService = AutheticationService(accRepo, tokenRepo)
 
-emailService = EmailService(GMailServiceProvider('tmlfun@gmail.com', 'Qwert@12345!', 'tmlfun@gmail.com'))
+emailService = ServiceFactory().createGmailService('tmlfun@gmail.com', 'brfksfpaejbgmexq', 'tmlfun@gmail.com')
 registrationValidator = RegistrationValidator(accRepo, tokenRepo, emailService)
 print('=============================')
 print('SIMPLE SSO API')
@@ -45,22 +46,28 @@ def welcome():
 
 @app.post("/register")
 def register(model: account.RegistrationModel):
+    print('API [/register]')
     acc = account.fromRegistrationModel(model)
     result = accRepo.registerNewAccount(acc)
     if result.errCode == defs.ERRCODE_NONE:
         token = tokenRepo.createToken({ 'id': acc.id, 'type':'registration-confirm-token' })
         registrationValidator.sendValidateEmail(acc, token)
-        return { 'errCode': defs.ERRCODE_NONE }
+
+        result = { 'errCode': defs.ERRCODE_NONE }
+        print('register result: %s' % json.dumps(result))
+        return result
     else:
+        print('register result: %s' % json.dumps(result))
         return result
 
 # @app.post("/register/phone")
 # def register(model: account.RegistrationFormPhone):
 #     return model
 
-@app.post("/register/validate/{code}")
+@app.get("/register/validate/{code}")
 def register(code):
     result = registrationValidator.validateConfirmCode(code)
+    print('[register/validate/%s] result: %s' % (code, json.dumps(result.__dict__)))
     return result
 
 @app.post("/login")

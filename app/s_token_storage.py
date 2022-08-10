@@ -1,8 +1,8 @@
 import uuid
-#from ..providers.collection_storage_provider import CollectionStorageProvider
+from sp_collection_storage import CollectionStorageProvider
 
 class TokenStorageService():
-    def __init__(self, storageProvider):
+    def __init__(self, storageProvider:CollectionStorageProvider):
         self.storageProvider = storageProvider
 
     def addToken(self, token, metadata):

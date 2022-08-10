@@ -1,9 +1,13 @@
 import smtplib
-class GMailServiceProvider():
-    def __init__(self, username, password, defaultFrom):
+
+from sp_email import EmailServiceProvider
+class SMPTEmailProvider(EmailServiceProvider):
+    def __init__(self, username, password, defaultFrom, smtpHost, smtpPort):
         self.username = username
         self.password = password
         self.defaultFrom = defaultFrom
+        self.smtpHost = smtpHost
+        self.smtpPort = smtpPort
 
     def send(self, recipient, subject, body):
         FROM = self.defaultFrom
@@ -15,12 +19,13 @@ class GMailServiceProvider():
         message = """From: %s\nTo: %s\nSubject: %s\n\n%s
         """ % (FROM, ", ".join(TO), SUBJECT, TEXT)
         try:
-            server = smtplib.SMTP("smtp.gmail.com", 587)
+            server = smtplib.SMTP(self.smtpHost, self.smtpPort)
             server.ehlo()
             server.starttls()
+            print('SMTP Login %s:%d with account: %s %s' % (self.smtpHost, self.smtpPort, self.username, self.password))
             server.login(self.username, self.password)
             server.sendmail(FROM, TO, message)
             server.close()
             print ('successfully sent the mail')
-        except:
-            print ("failed to send mail")
+        except Exception as ex:
+            print ("failed to send mail: %s" % ex)

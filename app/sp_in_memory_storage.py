@@ -1,5 +1,5 @@
 import json
-from .collection_storage_provider import CollectionStorageProvider
+from sp_collection_storage import CollectionStorageProvider
 
 
 class InMemoryStorageProvider(CollectionStorageProvider):
@@ -30,6 +30,8 @@ class InMemoryStorageProvider(CollectionStorageProvider):
         if collectionID not in self.collections:
             print('collection not exist: %s' % collectionID)
             return None
+
+        print('Collection [%s] find one: %s' % (collectionID, json.dumps(query)))
 
         for docID in self.collections[collectionID]:
             match = True

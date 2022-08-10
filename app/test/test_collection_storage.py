@@ -9,8 +9,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 
-import providers.in_memory_storage_provider
-from providers.in_memory_storage_provider import InMemoryStorageProvider
+from ..sp_in_memory_storage import InMemoryStorageProvider
 
 storage = InMemoryStorageProvider()
 
