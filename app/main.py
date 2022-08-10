@@ -1,4 +1,8 @@
+import base64
+from http.client import HTTPException
 import os, sys, json
+import uuid
+
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(APP_DIR)
@@ -8,25 +12,25 @@ print(__package__)
 
 import defs
 from models import account
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends, Form
 
-
-API_ENDPOINT_EMAIL_CONFIRM = os.environ['API_ENDPOINT_EMAIL_CONFIRM']
-
-
-
+from s_client_storage import OauthClientStorageService
+from s_oauth2 import Oauth2
+from s_signin import LoginModel, SignInService
 from s_factory import ServiceFactory
 from s_mail import EmailService
 from s_token_storage import TokenStorageService
 from sp_in_memory_storage import InMemoryStorageProvider
-from s_auth import AutheticationService, LoginModel
 from s_acc_storage import AccountStorageService
 from repo_account import AccountRepository
 from repo_token import TokenRepository
-
+from repo_client import OauthClientRepository
 from registration_validator import RegistrationValidator
 
 app = FastAPI()
+
+
+API_ENDPOINT_EMAIL_CONFIRM = os.environ['API_ENDPOINT_EMAIL_CONFIRM']
 
 docStorageProvider = InMemoryStorageProvider()
 
@@ -35,12 +39,18 @@ accRepo = AccountRepository(accStorageService)
 
 tokenStorageService = TokenStorageService(docStorageProvider)
 tokenRepo = TokenRepository(tokenStorageService)
-authService = AutheticationService(accRepo, tokenRepo)
+signInService = SignInService(accRepo, tokenRepo)
 
 GMAIL_ACCOUNT = os.environ['GMAIL_ACCOUNT']
 GMAIL_APP_PASSWORD = os.environ['GMAIL_APP_PASSWORD']
 emailService = ServiceFactory().createGmailService(GMAIL_ACCOUNT, GMAIL_APP_PASSWORD, GMAIL_ACCOUNT)
 registrationValidator = RegistrationValidator(accRepo, tokenRepo, emailService)
+
+
+clientStorage = OauthClientStorageService(storageProvider=docStorageProvider)
+clientRepo = OauthClientRepository(clientStorage=clientStorage)
+oauthService = Oauth2(clientRepo)
+
 print('=============================')
 print('SIMPLE SSO API')
 print('  Storage Provider: %s' % docStorageProvider)
@@ -78,10 +88,44 @@ def register(token):
     return result
 
 @app.post("/login")
-def login(model: LoginModel):
-    return authService.login(model)
+def login(model: LoginModel, request:Request):
+    client_id = request.headers.get('client_id')
+    if client_id == None:
+        raise HTTPException(status_code=400, detail="client_id not exists in headers")
+
+    return signInService.login(client_id, model)
 
 @app.post("/token/verify/{token}")
-def login(token):
-    return tokenRepo.get(token)
+def token_verify(token, request:Request):
+    client_id = request.headers.get('client_id')
+    if client_id == None:
+        raise HTTPException(status_code=400, detail="client_id not exists in headers")
 
+    metadata = tokenRepo.get(token)
+    if metadata == None:
+        raise HTTPException(status_code=404, detail="Token not found")
+
+    if metadata['client_id'] == request.headers.get('client_id'):
+        return metadata
+    
+    raise HTTPException(status_code=404, detail="Token not found")
+
+@app.post("/oauth2/token")
+def oauth2_token(request:Request, grant_type: str = Form(), username:str = Form(), password: str = Form()):
+    auth = request.headers.get('authorization')
+    if auth == None:
+        raise HTTPException(status_code=400, detail="Missing authorization in header")
+
+    if not auth.startswith('Basic '):
+        raise HTTPException(status_code=400, detail="Not support authorization=%s in header" % auth)
+
+    auth = auth[6:]
+    client_parts = base64.b64decode(auth).decode('utf-8').split(':')
+    client_id = client_parts[0]
+    client_secret = client_parts[1]
+    
+    if not oauthService.isClientValid(client_id, client_secret):
+        raise HTTPException(status_code=400, detail="Invalid client authorization")
+    
+    return signInService.login(client_id, LoginModel(username, password))
+    
