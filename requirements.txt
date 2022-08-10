@@ -4,3 +4,4 @@ pydantic
 paho-mqtt
 munch
 colorama
+python-multipart
