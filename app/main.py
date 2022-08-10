@@ -149,7 +149,7 @@ def oauth2_add_client(id, secret, apikey: str = Header()):
     clientRepo.add(id, secret)
     return 'ok'
 
-@app.put("oauth2/clients")
+@app.get("oauth2/clients")
 def oauth2_get_clients(apikey: str = Header()):
     if apikey != ADMIN_APIKEY:
         raise HTTPException(status_code=403, detail="Forbidden")
