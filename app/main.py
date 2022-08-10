@@ -2,6 +2,9 @@ import os, sys, json
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(APP_DIR)
+sys.path.append(os.path.dirname(APP_DIR))
+
+print(__package__)
 
 import defs
 from models import account
@@ -10,7 +13,7 @@ from fastapi import FastAPI, Request
 
 API_ENDPOINT_EMAIL_CONFIRM = os.environ['API_ENDPOINT_EMAIL_CONFIRM']
 
-print(__package__)
+
 
 from s_factory import ServiceFactory
 from s_mail import EmailService
