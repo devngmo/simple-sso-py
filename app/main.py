@@ -8,10 +8,11 @@ APP_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(APP_DIR)
 sys.path.append(os.path.dirname(APP_DIR))
  
-import defs
-from models import account
 from fastapi import FastAPI, Request, Depends, Form, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
+import defs, utils
+from models import account
 from s_client_storage import OauthClientStorageService
 from s_oauth2 import Oauth2
 from s_signin import LoginModel, SignInService
@@ -25,11 +26,37 @@ from repo_token import TokenRepository
 from repo_client import OauthClientRepository
 from registration_validator import RegistrationValidator
 
+ALLOW_CREDENTIALS = utils.getEnvBool('ALLOW_CREDENTIALS', False)
+ALLOW_ORIGINS = utils.getEnvValue('ALLOW_ORIGINS', '*').split(',')
+ALLOW_METHODS = utils.getEnvValue('ALLOW_METHODS', '*').split(',')
+ALLOW_HEADERS = utils.getEnvValue('ALLOW_HEADERS', '*').split(',')
+
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins = ALLOW_ORIGINS,
+    allow_credentials=ALLOW_CREDENTIALS,
+    allow_methods = ALLOW_METHODS,
+    allow_headers = ALLOW_HEADERS
+)
 
-ADMIN_APIKEY = os.environ['ADMIN_APIKEY']
-API_ENDPOINT_EMAIL_CONFIRM = os.environ['API_ENDPOINT_EMAIL_CONFIRM']
+
+ADMIN_APIKEY = utils.getEnvValue('ADMIN_APIKEY', 'admin')
+API_ENDPOINT_EMAIL_CONFIRM = utils.getEnvValue('API_ENDPOINT_EMAIL_CONFIRM', None)
+GMAIL_ACCOUNT = utils.getEnvValue('GMAIL_ACCOUNT', None)
+GMAIL_APP_PASSWORD = utils.getEnvValue('GMAIL_APP_PASSWORD', None)
+
+
+if API_ENDPOINT_EMAIL_CONFIRM == None:
+    raise Exception('Missing environment config: API_ENDPOINT_EMAIL_CONFIRM')
+
+if GMAIL_ACCOUNT == None:
+    raise Exception('Missing environment config: GMAIL_ACCOUNT')
+
+if GMAIL_APP_PASSWORD == None:
+    raise Exception('Missing environment config: GMAIL_APP_PASSWORD')
+
 
 docStorageProvider = InMemoryStorageProvider()
 
@@ -40,8 +67,6 @@ tokenStorageService = TokenStorageService(docStorageProvider)
 tokenRepo = TokenRepository(tokenStorageService)
 signInService = SignInService(accRepo, tokenRepo)
 
-GMAIL_ACCOUNT = os.environ['GMAIL_ACCOUNT']
-GMAIL_APP_PASSWORD = os.environ['GMAIL_APP_PASSWORD']
 emailService = ServiceFactory().createGmailService(GMAIL_ACCOUNT, GMAIL_APP_PASSWORD, GMAIL_ACCOUNT)
 registrationValidator = RegistrationValidator(accRepo, tokenRepo, emailService)
 
