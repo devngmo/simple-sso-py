@@ -46,7 +46,8 @@ ADMIN_APIKEY = utils.getEnvValue('ADMIN_APIKEY', 'admin')
 API_ENDPOINT_EMAIL_CONFIRM = utils.getEnvValue('API_ENDPOINT_EMAIL_CONFIRM', None)
 GMAIL_ACCOUNT = utils.getEnvValue('GMAIL_ACCOUNT', None)
 GMAIL_APP_PASSWORD = utils.getEnvValue('GMAIL_APP_PASSWORD', None)
-
+JWT_SECRET_KEY = utils.getEnvValue('JWT_SECRET_KEY', '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+JWT_ALGORITHM = utils.getEnvValue('JWT_SECRET_KEY', 'HS256')
 
 if API_ENDPOINT_EMAIL_CONFIRM == None:
     raise Exception('Missing environment config: API_ENDPOINT_EMAIL_CONFIRM')
@@ -64,7 +65,7 @@ accStorageService = AccountStorageService(docStorageProvider)
 accRepo = AccountRepository(accStorageService)
 
 tokenStorageService = TokenStorageService(docStorageProvider)
-tokenRepo = TokenRepository(tokenStorageService)
+tokenRepo = TokenRepository(JWT_SECRET_KEY, JWT_ALGORITHM, tokenStorageService)
 signInService = SignInService(accRepo, tokenRepo)
 
 emailService = ServiceFactory().createGmailService(GMAIL_ACCOUNT, GMAIL_APP_PASSWORD, GMAIL_ACCOUNT)

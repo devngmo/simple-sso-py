@@ -5,3 +5,5 @@ paho-mqtt
 munch
 colorama
 python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
