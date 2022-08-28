@@ -1,18 +1,19 @@
-import uuid
-from sp_collection_storage import CollectionStorageProvider
+class TokenStorageProviderInterface():
+    def __init__(self):
+        pass
+        
+    def addToken(self, token, metadata):
+        return None
+
+    def getToken(self, token):
+        return None
 
 class TokenStorageService():
-    def __init__(self, storageProvider:CollectionStorageProvider):
+    def __init__(self, storageProvider:TokenStorageProviderInterface):
         self.storageProvider = storageProvider
 
     def addToken(self, token, metadata):
-        return self.storageProvider.addDocument('tokens', token, metadata)
+        return self.storageProvider.addToken(token, metadata)
 
-    def get(self, token):
-        return self.storageProvider.findOne('tokens', {'_id': token})
-
-    def addClientToken(self, client_id, token, metadata):
-        return self.storageProvider.addDocument('tokens_%s' % client_id, token, metadata)
-
-    def getClientToken(self, client_id, token):
-        return self.storageProvider.findOne('tokens_%s' % client_id, {'_id': token})
+    def getToken(self, token):
+        return self.storageProvider.getToken(token)
