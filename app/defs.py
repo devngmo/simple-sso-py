@@ -29,7 +29,7 @@ tags_metadata = [
 ]
 
 DATA_FOLDER=os.path.join(os.getcwd(), 'data')
-if not os.path.exists():
+if not os.path.exists(DATA_FOLDER):
     print('ERROR: Data Folder not found: ', DATA_FOLDER)
 jwtFilePath = os.path.join(DATA_FOLDER, 'jwt-key')
 JWT_PRIVATE_KEY=''
