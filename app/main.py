@@ -1,29 +1,38 @@
 import base64
-
 import os, sys, json
-import uuid
-
+from typing import Union
+from munch import Munch
+from fastapi.security import APIKeyHeader
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(APP_DIR)
 sys.path.append(os.path.dirname(APP_DIR))
  
-from fastapi import FastAPI, Request, Depends, Form, Header, HTTPException
+from fastapi import FastAPI, Request, Depends, Form, Header, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 
 import defs, utils
 from models import account
-from s_client_storage import OauthClientStorageService
+from models.auth_app import AuthApplicationRegistrationModel, AuthApplication
 from s_oauth2 import Oauth2
 from s_signin import LoginModel, SignInService
 from s_factory import ServiceFactory
 from s_mail import EmailService
 from s_token_storage import TokenStorageService
-from sp_in_memory_storage import InMemoryStorageProvider
+from s_auth_app_storage import AuthAppStorageService
+from s_log import LogService
 from s_acc_storage import AccountStorageService
+
+from lp_log_mongo import LogProviderMongo
+from sp_auth_app_storage_mongo import AuthAppStorageProviderMongo
+from sp_account_storage_mongo import AccountStorageProviderMongo
+from sp_token_storage_redis import TokenStorageProviderRedis
+from sp_in_memory_storage import InMemoryStorageProvider
+
 from repo_account import AccountRepository
 from repo_token import TokenRepository
-from repo_client import OauthClientRepository
+from repo_auth_app import AuthAppRepository
+
 from registration_validator import RegistrationValidator
 
 ALLOW_CREDENTIALS = utils.getEnvBool('ALLOW_CREDENTIALS', False)
@@ -47,7 +56,16 @@ API_ENDPOINT_EMAIL_CONFIRM = utils.getEnvValue('API_ENDPOINT_EMAIL_CONFIRM', Non
 GMAIL_ACCOUNT = utils.getEnvValue('GMAIL_ACCOUNT', None)
 GMAIL_APP_PASSWORD = utils.getEnvValue('GMAIL_APP_PASSWORD', None)
 JWT_SECRET_KEY = utils.getEnvValue('JWT_SECRET_KEY', '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ')
-JWT_ALGORITHM = utils.getEnvValue('JWT_SECRET_KEY', 'HS256')
+JWT_ALGORITHM = 'RS256' #utils.getEnvValue('JWT_ALGORITHM', 'HS256')
+
+MONGO_HOST = utils.getEnvValue('MONGO_HOST', '')
+MONGO_PORT = int(utils.getEnvValue('MONGO_PORT', ''))
+MONGO_USER = utils.getEnvValue('MONGO_USER', '')
+MONGO_PASS = utils.getEnvValue('MONGO_PASS', '')
+
+REDIS_HOST = utils.getEnvValue('REDIS_HOST', '')
+REDIS_PORT = int(utils.getEnvValue('REDIS_PORT', ''))
+REDIS_PASS = utils.getEnvValue('REDIS_PASS', '')
 
 if API_ENDPOINT_EMAIL_CONFIRM == None:
     raise Exception('Missing environment config: API_ENDPOINT_EMAIL_CONFIRM')
@@ -58,137 +76,172 @@ if GMAIL_ACCOUNT == None:
 if GMAIL_APP_PASSWORD == None:
     raise Exception('Missing environment config: GMAIL_APP_PASSWORD')
 
+MongoCredential = Munch(host=MONGO_HOST, port=MONGO_PORT, user=MONGO_USER, passwd=MONGO_PASS)
 
-docStorageProvider = InMemoryStorageProvider()
+ssoLogProvider = LogService(LogProviderMongo(MongoCredential, 'sso_api_log'))
 
-accStorageService = AccountStorageService(docStorageProvider)
+accStorageService = AccountStorageService(AccountStorageProviderMongo(MongoCredential, 'accounts'))
 accRepo = AccountRepository(accStorageService)
 
-tokenStorageService = TokenStorageService(docStorageProvider)
-tokenRepo = TokenRepository(JWT_SECRET_KEY, JWT_ALGORITHM, tokenStorageService)
-signInService = SignInService(accRepo, tokenRepo)
+TokenRedisCredential = Munch(host=REDIS_HOST, port=REDIS_PORT, passwd=REDIS_PASS)
+
+tokenStorageService = TokenStorageService(TokenStorageProviderRedis(ssoLogProvider, TokenRedisCredential))
+tokenRepo = TokenRepository(defs.JWT_PRIVATE_KEY, JWT_ALGORITHM, tokenStorageService)
+signInService = SignInService(ssoLogProvider, accRepo, tokenRepo)
 
 emailService = ServiceFactory().createGmailService(GMAIL_ACCOUNT, GMAIL_APP_PASSWORD, GMAIL_ACCOUNT)
-registrationValidator = RegistrationValidator(accRepo, tokenRepo, emailService)
+registrationValidator = RegistrationValidator(ssoLogProvider, accRepo, tokenRepo, emailService)
 
-
-clientStorage = OauthClientStorageService(storageProvider=docStorageProvider)
-clientRepo = OauthClientRepository(clientStorage=clientStorage)
-oauthService = Oauth2(clientRepo)
+aaStorage = AuthAppStorageService(AuthAppStorageProviderMongo(ssoLogProvider, MongoCredential, 'oauth'))
+aaRepo = AuthAppRepository(aaStorage)
+oauthService = Oauth2(ssoLogProvider, aaRepo)
 
 print('=============================')
 print('SIMPLE SSO API')
-print('  Storage Provider: %s' % docStorageProvider)
 print('=============================')
-
 
 @app.get("/")
 def welcome(request:Request):
     return 'welcome to Simple SSO'
 
-@app.post("/register")
-def register(model: account.RegistrationModel, client_id: str = Header()):
-    print('API [/register]')
-    if client_id == None:
-        raise HTTPException(status_code=400, detail="client_id not exists in headers")
+@app.post("/api/v1/auth/registration/register")
+def registration_register(model: account.RegistrationModel, send_activation_email:str = Header()):
+    print('POST [/api/v1/auth/registration/register]')
     
     acc = account.fromRegistrationModel(model)
-    result = accRepo.registerNewAccount(client_id, acc)
+    result = accRepo.registerNewAccount(acc)
     if result.errCode == defs.ERRCODE_NONE:
-        token = tokenRepo.createToken({'client_id':client_id, 'id': acc.id, 'type':'registration-confirm-token' })
-        registrationValidator.sendValidateEmail(acc, token, API_ENDPOINT_EMAIL_CONFIRM)
+        token = tokenRepo.createJWTToken({'account_id': result['account']['_id'], 'type': defs.TOKEN_TYPE_REGISTRATION_CONFIRM })
+        if send_activation_email == '1':
+            registrationValidator.sendValidateEmail(acc, token, API_ENDPOINT_EMAIL_CONFIRM)
 
-        result = { 'errCode': defs.ERRCODE_NONE }
-        print('register result: %s' % json.dumps(result))
-        return result
-    else:
-        print('register result: %s' % json.dumps(result))
-        return result
+        result = { 'errCode': defs.ERRCODE_NONE, 'token': token }
+    return result
 
 # @app.post("/register/phone")
 # def register(model: account.RegistrationFormPhone):
 #     return model
 
-@app.get("/register/validate/{token}")
-def register_validate_token(token):
+@app.get("/api/v1/auth/registration/validate/{token}")
+def registration_validate_token(token):
     result = registrationValidator.validateConfirmCode(token)
     print('[register/validate/%s] result: %s' % (token, json.dumps(result.__dict__)))
+    if result.errCode == defs.ERRCODE_NONE:
+        return { 'errCode': defs.ERRCODE_NONE, 'msg': 'Congratulation! You can Login with your email now!' }
     return result
 
-@app.post("/login")
-def login(model: LoginModel, client_id: str = Header()):
-    if client_id == None:
-        raise HTTPException(status_code=400, detail="client_id not exists in headers")
-
-    return signInService.signIn(client_id, model)
-
-@app.get("/token/verify/{token}")
-def token_verify(token, client_id: str = Header()):
-    if client_id == None:
-        raise HTTPException(status_code=400, detail="client_id not exists in headers")
-
-    metadata = tokenRepo.get(token)
-    if metadata == None:
-        raise HTTPException(status_code=404, detail="Token not found")
-
-    if metadata['client_id'] == client_id:
-        return metadata
-    
-    raise HTTPException(status_code=404, detail="Token not found")
-
-@app.post("/oauth2/token")
-def oauth2_token(authorization:str = Header(), grant_type: str = Form(), username:str = Form(), password: str = Form()):
+@app.post("/api/v1/auth/login")
+def login(authorization:str = Header(), username:str = Form(), password: str = Form()):
     if authorization == None:
         raise HTTPException(status_code=400, detail="Missing authorization in header")
 
     if not authorization.startswith('Basic '):
-        raise HTTPException(status_code=400, detail="Not support authorization=%s in header" % auth)
+        raise HTTPException(status_code=400, detail="Not support authorization=%s in header" % authorization)
+
+    print(f'----------- authorization={authorization} username={username} password={password} ------------')
 
     authorization = authorization[6:]
-    client_parts = base64.b64decode(authorization).decode('utf-8').split(':')
-    client_id = client_parts[0]
-    client_secret = client_parts[1]
     
-    if not oauthService.isClientValid(client_id, client_secret):
+    client_parts = base64.b64decode(authorization).decode('utf-8').split(':')
+    app_code = client_parts[0]
+    client_secret = client_parts[1]
+
+    print(f'---- check login from client {app_code} secret {client_secret}...')
+
+    if not oauthService.isClientValid(app_code, client_secret):
         raise HTTPException(status_code=400, detail="Invalid client authorization")
     
-    return signInService.signIn(client_id, LoginModel(emailOrPhone=username, password=password))
-    
+    return signInService.signIn(app_code, username, password)
 
+@app.get("/api/v1/token/verify/{token}")
+def token_verify(token, app_id:str = Header(convert_underscores=False)):
+    if app_id == None:
+        raise HTTPException(status_code=400, detail="app_id not exists in headers")
 
-@app.get("/oauth2/token/verify/{token}")
-def token_verify(token, client_id: str = Header()):
-    if client_id == None:
-        raise HTTPException(status_code=400, detail="client_id not exists in headers")
-
-    metadata = tokenRepo.getClientToken(client_id, token)
+    metadata = tokenRepo.getToken(token)
     if metadata == None:
+        ssoLogProvider.debug('api', { 'api': 'api/v1/token/verify/%s' % token, 'app_id': app_id, 'msg': 'token not found' }, state='failed')
         raise HTTPException(status_code=404, detail="Token not found")
 
+    if metadata['app_id'] != app_id:
+        ssoLogProvider.debug('api', { 'api': 'api/v1/token/verify/%s' % token, 'app_id': app_id, 'msg': 'metadata.app_id not match', 'token_app_id': metadata['app_id'] }, state='failed')
+        return None
     return metadata
 
-@app.put("/oauth2/client/{id}/{secret}")
-def oauth2_add_client(id, secret, apikey: str = Header()):
-    if apikey != ADMIN_APIKEY:
-        raise HTTPException(status_code=403, detail="Forbidden")
+# @app.post("/api/v1/oauth2/login")
+# def oauth2_login(authorization:str = Header(), grant_type: str = Form(), app_id:str = Header(convert_underscores=False), username:str = Form(), password: str = Form()):
+#     if authorization == None:
+#         raise HTTPException(status_code=400, detail="Missing authorization in header")
 
-    clientRepo.add(id, secret)
-    return 'ok'
+#     if not authorization.startswith('Basic '):
+#         raise HTTPException(status_code=400, detail="Not support authorization=%s in header" % authorization)
 
-@app.get("/oauth2/clients")
-def oauth2_get_clients(apikey: str = Header()):
-    if apikey != ADMIN_APIKEY:
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-    return clientRepo.getAll()
-
-
-@app.get('/dev/accounts')
-def get_all_accounts(client_id:str = Header(), apikey: str = Header()):
-    if apikey != ADMIN_APIKEY:
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-    if client_id == None:
-        raise HTTPException(status_code=400, detail="client_id not exists in headers")
+#     authorization = authorization[6:]
+#     client_parts = base64.b64decode(authorization).decode('utf-8').split(':')
+#     client_key = client_parts[0]
+#     client_secret = client_parts[1]
+        
+#     if not oauthService.isClientValid(app_id, client_key, client_secret):
+#         raise HTTPException(status_code=400, detail="Invalid client authorization")
     
-    return accRepo.getAll(client_id)
+#     return signInService.signIn(app_id, LoginModel(emailOrPhone=username, password=password))
+    
+@app.get("/api/v1/application")
+def app_get_client(id:Union[str, None] = None, code:Union[str, None]=None, apikey: str = Header()):
+    if apikey != ADMIN_APIKEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    if id != None:
+        return aaRepo.getByAppID(id)
+    elif code != None:
+        return aaRepo.getByAppCode(code)
+    return HTTPException(status_code=404, detail="App not found")
+
+@app.put("/api/v1/application")
+def app_add_client(model: AuthApplicationRegistrationModel, apikey: str = Header()):
+    if apikey != ADMIN_APIKEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    appInfo = AuthApplication.fromRegistrationModel(model)
+    return aaRepo.add(appInfo)
+
+@app.get("/api/v1/applications")
+def app_get_clients(apikey: str = Header()):
+    if apikey != ADMIN_APIKEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return aaRepo.getAll()
+
+@app.delete("/api/v1/applications")
+def app_delete_clients(apikey: str = Header()):
+    if apikey != ADMIN_APIKEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return aaRepo.deleteAll()
+
+@app.delete("/api/v1/accounts")
+def accounts_delete_all(apikey: str = Header()):
+    if apikey != ADMIN_APIKEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return accRepo.deleteAll()
+
+@app.get("/api/v1/accounts")
+def accounts_get_all(apikey: str = Header()):
+    if apikey != ADMIN_APIKEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return accRepo.getAll()
+
+
+@app.get("/api/v1/accounts/tenants")
+def accounts_get_all_tenants(apikey: str = Header()):
+    if apikey != ADMIN_APIKEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return accRepo.getAllTenants()
+
+@app.post("/api/v1/account/{account_id}/upgrade/tenant")
+def account_upgrade_to_tenant(account_id, apikey: str = Header()):
+    if apikey != ADMIN_APIKEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    success = accRepo.upgradeToTenant(account_id)
+    if success:
+        return {'errCode': defs.ERRCODE_NONE, 'msg': f'Account {account_id} has been upgraded as a Tenant'}
+    else:
+        raise HTTPException(status_code=500, detail=f"Unhandled Error: can not upgrade account {account_id} as a Tenant")
