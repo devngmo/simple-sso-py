@@ -29,4 +29,8 @@ tags_metadata = [
 ]
 
 DATA_FOLDER='data'
-JWT_PRIVATE_KEY = utils.loadText(os.path.join(DATA_FOLDER, 'jwt-key'))
+jwtFilePath = os.path.join(DATA_FOLDER, 'jwt-key')
+if os.path.exists(jwtFilePath):
+    JWT_PRIVATE_KEY = utils.loadText()
+else:
+    print('ERROR: File not found: ', jwtFilePath)
