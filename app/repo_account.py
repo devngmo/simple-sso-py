@@ -8,33 +8,42 @@ class AccountRepository():
     def __init__(self, storageService: AccountStorageService):
         self.storateService = storageService
     
-    def registerNewAccount(self, client_id, account:ModelAccount.Account):
+    def registerNewAccount(self, account:ModelAccount.Account):
         print('AccountRepo: registerNewAccount...')
         
-        if utils.isValidEmailAddress(account.id):
-            acc = self.findByMail(client_id, account.id, account.passhash)
-            if acc != None:
-                return Munch({ 'errCode':defs.ERRCODE_REGISTER_EMAIL_ALREADY_EXIST })
-        else:
-            acc = self.findByPhone(client_id, account.id, account.passhash)
-            if acc != None:
+        acc = self.storateService.findByMail(account.email)
+
+        if acc != None:
+            if acc['activated'] == True:
                 return Munch({ 'errCode':defs.ERRCODE_REGISTER_PHONE_ALREADY_EXIST })
-        
-        self.storateService.addAccount(client_id, account)
-        return Munch({ 'errCode': defs.ERRCODE_NONE })
+            else:
+                self.storateService.replaceUnactivatedAccount(acc['_id'], account)
+        else:
+            acc = self.storateService.addAccount(account)
 
-    def updateAccount(self, client_id, account):
-        self.storateService.updateAccount(client_id, account)
+        return Munch({ 'errCode': defs.ERRCODE_NONE, 'account': acc })
 
-    def findByMail(self, client_id, email, passhash):
-        return self.storateService.findOne(client_id, {'email': email, 'passhash': passhash})
+    def updateAccount(self, account_id, changes):
+        return self.storateService.updateAccount(account_id, changes)
 
-    def findByPhone(self, client_id, phone, passhash):
-        return self.storateService.findOne(client_id, {'phone': phone, 'passhash': passhash})
-    
-    def finByID(self, client_id, id):
-        print('Account Repository: find by ID: %s' % id)
-        return self.storateService.findOne(client_id, {'_id' : id})
+    def finByID(self, account_id):
+        print('Account Repository: find by ID: %s' % account_id)
+        return self.storateService.getAccountByID(account_id)
 
-    def getAll(self, client_id):
-        return self.storateService.getAll(client_id)
+    def getAll(self):
+        return self.storateService.getAllAccounts()
+
+    def getAllTenants(self):
+        return self.storateService.getAllTenantAccounts()
+
+    def deleteAll(self):
+        return self.storateService.deleteAllAccounts()
+
+    def findByEmail(self, email):
+        return self.storateService.findByMail(email)
+
+    def findByPhone(self, phone):
+        return self.storateService.findByPhone(phone)
+
+    def upgradeToTenant(self, account_id):
+        return self.storateService.updateAccount(account_id, {'is_tenant': True})
