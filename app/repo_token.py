@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Union
 import uuid
 from passlib.context import CryptContext
 from jose import JWTError, jwt
@@ -12,33 +13,27 @@ class TokenRepository():
         self.jwtAlgorithm = jwtAlgorithm
         self.pwdContext = CryptContext(schemes='bcrypt', deprecated='auto')
 
-    def add(self, token, metadata):
+    def addToken(self, token, metadata):
         self.tokenStorage.addToken(token, metadata)
 
-    def get(self, token):
-        return self.tokenStorage.get(token)
+    def getToken(self, token):
+        return self.tokenStorage.getToken(token)
 
-    def createToken(self, metadata:dict, expires_delta: timedelta | None = None):
+    def createJWTToken(self, metadata:dict, expires_delta: Union[timedelta, None] = None):
         to_encode = metadata.copy()
         if expires_delta:
-            exprire = datetime.utcnow() + expires_delta
+            expire = datetime.utcnow() + expires_delta
         else:
             expire = datetime.utcnow() + timedelta(minutes=15)
         
         to_encode.update({'exp': expire})
         token = jwt.encode(to_encode, self.jwtSecretKey, algorithm=self.jwtAlgorithm)
-        self.add(token, metadata)
+        self.addToken(token, metadata)
         return token
 
-    def addClientToken(self, client_id, token, metadata):
-        self.tokenStorage.addClientToken(client_id, token, metadata)
-
-    def getClientToken(self, client_id, token):
-        return self.tokenStorage.getClientToken(client_id, token)
-
-    def createClientToken(self, client_id, metadata):
+    def createUUIDToken(self, metadata):
         token = uuid.uuid4().hex
-        self.addClientToken(client_id, token, metadata)
+        self.addToken(token, metadata)
         return token
 
     
