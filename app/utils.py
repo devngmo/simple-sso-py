@@ -15,3 +15,18 @@ def getEnvValue(key, defaultValue):
     if key in os.environ:
         return os.environ[key]
     return defaultValue
+
+def getProperty(obj, key):
+    d = obj
+    if isinstance(d, dict):
+        if key in d:
+            return d[key]
+    if isinstance(d, object):
+        if key in d.__dict__:
+            return d.__dict__[key]
+    
+    return None
+
+def loadText(fp):
+    with open(fp) as f:
+        return f.read()
