@@ -34,6 +34,7 @@ if not os.path.exists(DATA_FOLDER):
 jwtFilePath = os.path.join(DATA_FOLDER, 'jwt-key')
 JWT_PRIVATE_KEY=''
 if os.path.exists(jwtFilePath):
-    JWT_PRIVATE_KEY = utils.loadText()
+    JWT_PRIVATE_KEY = utils.loadText(jwtFilePath)
+    print(JWT_PRIVATE_KEY)
 else:
     print('ERROR: File not found: ', jwtFilePath)
