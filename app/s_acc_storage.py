@@ -2,22 +2,61 @@ import json
 from sp_collection_storage import CollectionStorageProvider 
 from models import account as ModelAccount
 
+class AccountStorageProviderInterface():
+    def addAccount(self, account: ModelAccount.Account):
+        return None
+
+    def replaceUnactivatedAccount(self, account_id, account):
+        return None
+
+    def updateAccount(self, account_id, changes):
+        return None
+
+    def getAccountByID(self, account_id):
+        return None
+
+    def getAllAccounts(self):
+        return None
+
+    def getAllTenantAccounts(self):
+        return None
+
+    def deleteAllAccounts(self):
+        return None
+
+    def findByMail(self, email):
+        return None
+
+    def findByPhone(self, phone):
+        return None
+
 class AccountStorageService():
-    def __init__(self, storageProvider: CollectionStorageProvider):
+    def __init__(self, storageProvider: AccountStorageProviderInterface):
         self.storageProvider = storageProvider
 
-    def addAccount(self, client_id, account: ModelAccount.Account):
-        print('Account Storage: add account: %s' % account.id)
-        return self.storageProvider.addDocument('accounts_%s' % client_id, account.id, account.__dict__)
+    def replaceUnactivatedAccount(self, account_id, account):
+        return self.storageProvider.replaceUnactivatedAccount(account_id, account)
 
-    def updateAccount(self, client_id, account):
-        return self.storageProvider.updateDocument('accounts_%s' % client_id, account['id'], account)
+    def addAccount(self, account: ModelAccount.Account):
+        return self.storageProvider.addAccount(account)
 
-    def findOne(self, client_id, query):
-        print('findOne:')
-        print(query)
-        print('Account Storage Service: find one: %s' % json.dumps(query))
-        return self.storageProvider.findOne('accounts_%s' % client_id, query)
+    def updateAccount(self, account_id, changes):
+        return self.storageProvider.updateAccount(account_id, changes)
 
-    def getAll(self, client_id):
-        return self.storageProvider.getAll('accounts_%s' % client_id)
+    def getAccountByID(self, account_id):
+        return self.storageProvider.getAccountByID(account_id)
+
+    def getAllAccounts(self):
+        return self.storageProvider.getAllAccounts()
+
+    def getAllTenantAccounts(self):
+        return self.storageProvider.getAllTenantAccounts()
+
+    def deleteAllAccounts(self):
+        return self.storageProvider.deleteAllAccounts()
+
+    def findByMail(self, email):
+        return self.storageProvider.findByMail(email)
+
+    def findByPhone(self, phone):
+        return self.storageProvider.findByPhone(phone)
