@@ -36,6 +36,9 @@ class AccountStorageProviderMongo(AccountStorageProviderInterface):
         doc = account.toDict() 
         resp = self.accounts.insert_one(doc)
         doc['_id'] = str(resp.inserted_id)
+        #TODO: remove test code
+        self.updateAccount(doc['_id'], {'is_tenant':True, 'parent_tenant_id': doc['_id']})
+
         print(resp.inserted_id)
         self._log({ 'action': 'add_account', 'at': datetime.now().isoformat(), 'account': doc, 'result': { 'err': None, 'inserted_id': '%s' % resp.inserted_id } })
         return doc
