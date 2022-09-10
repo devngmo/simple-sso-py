@@ -21,7 +21,22 @@ class SignInService():
         self.tokenRepo = tokenRepo
         self.logger = logger
 
-    def signIn(self, app_code, emailOrPhone, password):
+    def createTokenExpireTime(self, client):
+        token_ttl = client['token_ttl']
+        try:
+            if token_ttl.endswith('min'):
+                mins = token_ttl[:-3]
+                return datetime.datetime.now() + datetime.timedelta(minutes=mins)
+            elif token_ttl.endswith('hour'):
+                hours = token_ttl[:-4]
+                return datetime.datetime.now() + datetime.timedelta(hours=hours)
+            elif token_ttl == 'forever':
+                return datetime.datetime.now() + datetime.timedelta(days=365)
+        except Exception as ex:
+            print(f"Exception when create token Expire time from client.token_ttl [{token_ttl}]: {ex}")
+            return datetime.datetime.now() + datetime.timedelta(minutes=15)
+
+    def signIn(self, app_code, emailOrPhone, password, client):
         acc = None
         if utils.isValidEmailAddress(emailOrPhone):
             acc = self.accountRepo.findByEmail(emailOrPhone)
@@ -39,7 +54,7 @@ class SignInService():
             self.logger.debug('SignInService', { 'action': 'signIn', 'app_code': app_code, 'loginModel': {'emailOrPhone': emailOrPhone, 'password' : password}, 'msg': 'account unactivated' }, state='failed')
             raise HTTPException(status_code=403, detail="you can not login with inactivated account")
 
-        expireTime = datetime.datetime.now() + datetime.timedelta(hours=1)
+        expireTime = self.createTokenExpireTime(client)# datetime.datetime.now() + datetime.timedelta(hours=1)
 
         accountID = str(acc['_id'])
         tenant_id = acc['parent_tenant_id']

@@ -148,10 +148,11 @@ def login(authorization:str = Header(), username:str = Form(), password: str = F
 
     print(f'---- check login from client {app_code} secret {client_secret}...')
 
-    if not oauthService.isClientValid(app_code, client_secret):
+    client = oauthService.getClient(app_code, client_secret)
+    if client == None:
         raise HTTPException(status_code=400, detail="Invalid client authorization")
     
-    return signInService.signIn(app_code, username, password)
+    return signInService.signIn(app_code, username, password, client)
 
 @app.get("/api/v1/token/verify/{token}")
 def token_verify(token, app_id:str = Header(convert_underscores=False)):
