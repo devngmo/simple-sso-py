@@ -1,6 +1,6 @@
 import base64
 import os, sys, json
-from typing import Union
+from typing import Optional, Union
 from munch import Munch
 from fastapi.security import APIKeyHeader
 
@@ -131,7 +131,7 @@ def registration_validate_token(token):
     return result
 
 @app.post("/api/v1/auth/login")
-def login(fcm_token:Union[str,None] = Header(), apn_token:Union[str,None] = Header(), device_info:str = Header(), authorization:str = Header(), username:str = Form(), password: str = Form()):
+def login(fcm_token:Union[str,None] = Header(default=None), apn_token:Union[str,None] = Header(default=None), device_info:str = Header(), authorization:str = Header(), username:str = Form(), password: str = Form()):
     if authorization == None:
         raise HTTPException(status_code=400, detail="Missing authorization in header")
 
