@@ -64,7 +64,10 @@ class SignInService():
             roles = ['admin']
 
         loginSession = {'id': accountID, 'roles': roles, 'name': acc['name'], 'email': acc['email'], 'is_tenant': acc['is_tenant'], 'tenant_id': tenant_id, 'ttl': 60*60, 'expire': expireTime.isoformat(), 'type': defs.TOKEN_TYPE_AUTH_ACCESS }
-        token = self.tokenRepo.createJWTToken( loginSession )
+        print('loginSession: ', json.dumps(loginSession, indent=2))
+
+        dateDiff = expireTime-datetime.datetime.now()
+        token = self.tokenRepo.createJWTToken( loginSession, dateDiff )
         self.logger.debug('SignInService', { 'action': 'signIn', 'app_code': app_code, 'loginModel': {'emailOrPhone': emailOrPhone, 'password' : password}, 'msg': 'logged in', 'access_token': token }, state='success')
 
-        return { 'account_id': accountID, 'access_token': token, 'ttl': 60*60, 'expire': expireTime.isoformat() }
+        return { 'account_id': accountID, 'access_token': token, 'ttl': dateDiff.seconds, 'expire': expireTime.isoformat() }
