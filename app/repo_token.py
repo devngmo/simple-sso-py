@@ -26,6 +26,7 @@ class TokenRepository():
         else:
             expire = datetime.utcnow() + timedelta(minutes=15)
         
+        print('JWT create token expire: ', expire.isoformat())
         to_encode.update({'exp': expire})
         token = jwt.encode(to_encode, self.jwtSecretKey, algorithm=self.jwtAlgorithm)
         self.addToken(token, metadata)

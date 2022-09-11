@@ -15,7 +15,7 @@ class AccountStorageProviderMongo(AccountStorageProviderInterface):
         self.logs = self.accDB.logs
 
     def _log(self, entry):
-        print('AccountStorageProviderMongo: %s' % json.dumps(entry))
+        #print('AccountStorageProviderMongo: %s' % json.dumps(entry))
         self.logs.insert_one(entry)
 
     def saveUserDeviceInfo(self, account_id:str, fcm_token:str, apn_token:str, device_info:str):
