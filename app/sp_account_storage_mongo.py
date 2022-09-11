@@ -1,9 +1,6 @@
 from datetime import datetime
-import json, utils, hashlib
-from turtle import update
-from pymongo import MongoClient
+import json, hashlib
 from bson.objectid import ObjectId
-from urllib.parse import quote
 
 import mongo_helper
 from s_acc_storage import AccountStorageProviderInterface
