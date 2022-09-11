@@ -30,6 +30,9 @@ class AccountStorageProviderInterface():
     def findByPhone(self, phone):
         return None
 
+    def saveUserDeviceInfo(self, account_id:str, fcm_token:str, apn_token:str, device_info:str):
+        return None
+
 class AccountStorageService():
     def __init__(self, storageProvider: AccountStorageProviderInterface):
         self.storageProvider = storageProvider
@@ -60,3 +63,6 @@ class AccountStorageService():
 
     def findByPhone(self, phone):
         return self.storageProvider.findByPhone(phone)
+
+    def saveUserDeviceInfo(self, account_id:str, fcm_token:str, apn_token:str, device_info:str):
+        return self.storageProvider.saveUserDeviceInfo(account_id, fcm_token, apn_token, device_info)

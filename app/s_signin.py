@@ -67,4 +67,4 @@ class SignInService():
         token = self.tokenRepo.createJWTToken( loginSession )
         self.logger.debug('SignInService', { 'action': 'signIn', 'app_code': app_code, 'loginModel': {'emailOrPhone': emailOrPhone, 'password' : password}, 'msg': 'logged in', 'access_token': token }, state='success')
 
-        return { 'access_token': token, 'ttl': 60*60, 'expire': expireTime.isoformat() }
+        return { 'account_id': accountID, 'access_token': token, 'ttl': 60*60, 'expire': expireTime.isoformat() }

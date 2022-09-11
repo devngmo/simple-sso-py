@@ -1,5 +1,6 @@
 from datetime import datetime
-import json, utils
+import json, utils, hashlib
+from turtle import update
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from urllib.parse import quote
@@ -20,6 +21,40 @@ class AccountStorageProviderMongo(AccountStorageProviderInterface):
         print('AccountStorageProviderMongo: %s' % json.dumps(entry))
         self.logs.insert_one(entry)
 
+    def saveUserDeviceInfo(self, account_id:str, fcm_token:str, apn_token:str, device_info:str):
+        try:
+            device_info_model = json.loads(device_info)
+            acc = self.getAccountByID(account_id)
+            devices = []
+            if 'devices' in acc:
+                devices = acc['devices']
+
+            md5 = hashlib.md5()
+            md5.update(device_info.encode('utf-8'))
+            device_hash_id = md5.hexdigest() # str(int(md5.hexdigest(), 16))
+            print('device_hash_id ', device_hash_id)
+
+            d = None
+            for existedDevice in devices:
+                if existedDevice['hash_id'] == device_hash_id:
+                    d = existedDevice
+                    break
+            if d == None:
+                d = { 'hash_id': device_hash_id, 'info': device_info_model }
+                devices += [ d ]
+
+            if fcm_token != None:
+                d['fcm_token'] = fcm_token
+            if apn_token != None:
+                d['apn_token'] = apn_token
+
+            resp = self.accounts.update_one({'_id': ObjectId(account_id)}, { '$set': { 'devices': devices } })
+            self._log({'action': 'saveUserDeviceInfo', 'account_id': account_id, 'fcm_token': fcm_token, 'apn_token': apn_token, 'device': device_info_model, 'result': { 'acknowledged': f'{resp.acknowledged}', 'modified_count': f'{resp.modified_count}', 'raw_result': f'{resp.raw_result}' }})
+
+        except Exception as ex:
+            self._log({'action': 'saveUserDeviceInfo', 'account_id': account_id, 'fcm_token': fcm_token, 'apn_token': apn_token, 'device': device_info_model, 'result': f'Exception {ex}'})
+
+
     def replaceUnactivatedAccount(self, account_id, account: ModelAccount.Account):
         print('Account DB [%s]: replace unactivated account: %s' % (self.dbName, account_id))
         doc = account.toDict()
@@ -33,7 +68,8 @@ class AccountStorageProviderMongo(AccountStorageProviderInterface):
 
     def addAccount(self, account: ModelAccount.Account):
         print('Account DB [%s]: add account by email: %s' % (self.dbName, account.email))
-        doc = account.toDict() 
+        doc = account.toDict()
+        doc['devices'] = []
         resp = self.accounts.insert_one(doc)
         doc['_id'] = str(resp.inserted_id)
         #TODO: remove test code
