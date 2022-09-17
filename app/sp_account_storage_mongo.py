@@ -1,5 +1,6 @@
 from datetime import datetime
 import json, hashlib
+import uuid
 from bson.objectid import ObjectId
 
 import mongo_helper
@@ -45,7 +46,7 @@ class AccountStorageProviderMongo(AccountStorageProviderInterface):
             if apn_token != None:
                 d['apn_token'] = apn_token
 
-            resp = self.accounts.update_one({'_id': ObjectId(account_id)}, { '$set': { 'devices': devices } })
+            resp = self.accounts.update_one({'_id': account_id}, { '$set': { 'devices': devices } })
             self._log({'action': 'saveUserDeviceInfo', 'account_id': account_id, 'fcm_token': fcm_token, 'apn_token': apn_token, 'device': device_info_model, 'result': { 'acknowledged': f'{resp.acknowledged}', 'modified_count': f'{resp.modified_count}', 'raw_result': f'{resp.raw_result}' }})
 
         except Exception as ex:
@@ -55,7 +56,7 @@ class AccountStorageProviderMongo(AccountStorageProviderInterface):
     def replaceUnactivatedAccount(self, account_id, account: ModelAccount.Account):
         print('Account DB [%s]: replace unactivated account: %s' % (self.dbName, account_id))
         doc = account.toDict()
-        resp = self.accounts.replace_one({'_id': ObjectId(account_id), 'activated': False}, doc)
+        resp = self.accounts.replace_one({'_id': account_id, 'activated': False}, doc)
         if resp.matched_count == 1 and resp.modified_count == 1:
             self._log({ 'action': 'replaceUnactivatedAccount', 'at': datetime.now().isoformat(), 'account': doc, 'result': { 'err': None, 'raw_result': resp.raw_result } })
             return True
@@ -67,8 +68,9 @@ class AccountStorageProviderMongo(AccountStorageProviderInterface):
         print('Account DB [%s]: add account by email: %s' % (self.dbName, account.email))
         doc = account.toDict()
         doc['devices'] = []
+        doc['_id'] = uuid.uuid4().hex
         resp = self.accounts.insert_one(doc)
-        doc['_id'] = str(resp.inserted_id)
+        
         #TODO: remove test code
         self.updateAccount(doc['_id'], {'is_tenant':True, 'parent_tenant_id': doc['_id']})
 
@@ -78,7 +80,7 @@ class AccountStorageProviderMongo(AccountStorageProviderInterface):
 
     def updateAccount(self, account_id, changes):
         print('Account DB: [%s] update account: %s' % (self.dbName, account_id))
-        resp = self.accounts.update_one({'_id': ObjectId(account_id)}, { '$set': changes })
+        resp = self.accounts.update_one({'_id': account_id}, { '$set': changes })
         if resp.modified_count == 1:
             self._log({ 'action': 'update_account', 'at': datetime.now().isoformat(), 'account_id': account_id, 'result': { 'err': None, 'changes': changes } })
             return True
@@ -87,13 +89,12 @@ class AccountStorageProviderMongo(AccountStorageProviderInterface):
         return False
 
     def getAccountByID(self, account_id):
-        return self.accounts.find_one({'_id': ObjectId(account_id)})
+        return self.accounts.find_one({'_id': account_id})
 
     def getAllAccounts(self):
         cursor = self.accounts.find({})
         founds = []
         for acc in cursor:
-            acc['_id'] = str(acc['_id'])
             founds = founds + [acc]
         return founds
 
@@ -101,7 +102,6 @@ class AccountStorageProviderMongo(AccountStorageProviderInterface):
         cursor = self.accounts.find({'is_tenant': True})
         founds = []
         for acc in cursor:
-            acc['_id'] = str(acc['_id'])
             founds = founds + [acc]
         return founds
     
@@ -111,13 +111,7 @@ class AccountStorageProviderMongo(AccountStorageProviderInterface):
         return { 'deleted_count': resp.deleted_count }
 
     def findByMail(self, email):
-        acc = self.accounts.find_one({'email': email})
-        if acc != None:
-            acc['_id'] = str(acc['_id'])
-        return acc
+        return self.accounts.find_one({'email': email})
 
     def findByPhone(self, phone):
-        acc = self.accounts.find_one({'phone': phone})
-        if acc != None:
-            acc['_id'] = str(acc['_id'])
-        return acc
+        return self.accounts.find_one({'phone': phone})
