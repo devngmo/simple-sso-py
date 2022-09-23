@@ -48,5 +48,5 @@ class AccountRepository():
     def upgradeToTenant(self, account_id):
         return self.storateService.updateAccount(account_id, {'is_tenant': True})
 
-    def saveUserDeviceInfo(self, account_id:str, fcm_token:str, apn_token:str, device_info:str):
-        return self.storateService.saveUserDeviceInfo(account_id, fcm_token, apn_token, device_info)
+    def saveUserDeviceInfo(self, account_id:str, fcm_token:str, apn_token:str, device_info:str, installation_id:str):
+        return self.storateService.saveUserDeviceInfo(account_id, fcm_token, apn_token, device_info, installation_id)

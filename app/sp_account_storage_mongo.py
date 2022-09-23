@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import json, hashlib
 import uuid
 from bson.objectid import ObjectId
@@ -19,27 +19,31 @@ class AccountStorageProviderMongo(AccountStorageProviderInterface):
         #print('AccountStorageProviderMongo: %s' % json.dumps(entry))
         self.logs.insert_one(entry)
 
-    def saveUserDeviceInfo(self, account_id:str, fcm_token:str, apn_token:str, device_info:str):
+    def saveUserDeviceInfo(self, account_id:str, fcm_token:str, apn_token:str, device_info:str, installation_id: str):
         try:
             device_info_model = json.loads(device_info)
             acc = self.getAccountByID(account_id)
             devices = []
             if 'devices' in acc:
                 devices = acc['devices']
-
-            md5 = hashlib.md5()
-            md5.update(device_info.encode('utf-8'))
-            device_hash_id = md5.hexdigest() # str(int(md5.hexdigest(), 16))
-            print('device_hash_id ', device_hash_id)
+            
+            # device_hash_id = installation_id
+            # if device_hash_id == None:
+            #     md5 = hashlib.md5()
+            #     md5.update(device_info.encode('utf-8'))
+            #     device_hash_id = md5.hexdigest() # str(int(md5.hexdigest(), 16))
+            #     print('device_hash_id ', device_hash_id)
 
             d = None
             for existedDevice in devices:
-                if existedDevice['hash_id'] == device_hash_id:
+                if existedDevice['hash_id'] == installation_id:
                     d = existedDevice
                     break
             if d == None:
-                d = { 'hash_id': device_hash_id, 'info': device_info_model }
+                d = { 'hash_id': installation_id, 'info': device_info_model, 'lastLoginTime': datetime.now(timezone.utc) }
                 devices += [ d ]
+            else:
+                d['lastLoginTime'] = datetime.now(timezone.utc)
 
             if fcm_token != None:
                 d['fcm_token'] = fcm_token

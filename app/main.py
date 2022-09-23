@@ -131,7 +131,13 @@ def registration_validate_token(token):
     return result
 
 @app.post("/api/v1/auth/login")
-def login(fcm_token:Union[str,None] = Header(default=None), apn_token:Union[str,None] = Header(default=None), device_info:str = Header(), authorization:str = Header(), username:str = Form(), password: str = Form()):
+def login(
+    installation_id:str = Header(), 
+    fcm_token:Union[str,None] = Header(default=None), 
+    apn_token:Union[str,None] = Header(default=None), 
+    device_info:str = Header(), 
+    authorization:str = Header(), 
+    username:str = Form(), password: str = Form()):
     if authorization == None:
         raise HTTPException(status_code=400, detail="Missing authorization in header")
 
@@ -153,7 +159,7 @@ def login(fcm_token:Union[str,None] = Header(default=None), apn_token:Union[str,
         raise HTTPException(status_code=400, detail="Invalid client authorization")
     
     signInResult = signInService.signIn(app_code, username, password, client)
-    accRepo.saveUserDeviceInfo(signInResult['account_id'], fcm_token, apn_token, device_info)
+    accRepo.saveUserDeviceInfo(signInResult['account_id'], fcm_token, apn_token, device_info, installation_id)
     return signInResult
 
 @app.get("/api/v1/token/verify/{token}")
