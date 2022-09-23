@@ -133,11 +133,13 @@ def registration_validate_token(token):
 @app.post("/api/v1/auth/login")
 def login(
     installation_id:str = Header(), 
-    fcm_token:Union[str,None] = Header(default=None), 
-    apn_token:Union[str,None] = Header(default=None), 
     device_info:str = Header(), 
     authorization:str = Header(), 
-    username:str = Form(), password: str = Form()):
+    username:str = Form(), 
+    password: str = Form(),
+    fcm_token:Union[str,None] = Header(default=None), 
+    apn_token:Union[str,None] = Header(default=None)
+    ):
     if authorization == None:
         raise HTTPException(status_code=400, detail="Missing authorization in header")
 
