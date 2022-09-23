@@ -36,11 +36,11 @@ class AccountStorageProviderMongo(AccountStorageProviderInterface):
 
             d = None
             for existedDevice in devices:
-                if existedDevice['hash_id'] == installation_id:
+                if existedDevice['install_id'] == installation_id:
                     d = existedDevice
                     break
             if d == None:
-                d = { 'hash_id': installation_id, 'info': device_info_model, 'lastLoginTime': datetime.now(timezone.utc) }
+                d = { 'install_id': installation_id, 'info': device_info_model, 'lastLoginTime': datetime.now(timezone.utc) }
                 devices += [ d ]
             else:
                 d['lastLoginTime'] = datetime.now(timezone.utc)
