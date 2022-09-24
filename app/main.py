@@ -132,8 +132,8 @@ def registration_validate_token(token):
 
 @app.post("/api/v1/auth/login")
 def login(
-    installation_id:str = Header(), 
-    device_info:str = Header(), 
+    installation_id:Union[str, None] = Header(), 
+    device_info:Union[str, None] = Header(), 
     authorization:str = Header(), 
     username:str = Form(), 
     password: str = Form(),
@@ -161,7 +161,8 @@ def login(
         raise HTTPException(status_code=400, detail="Invalid client authorization")
     
     signInResult = signInService.signIn(app_code, username, password, client)
-    accRepo.saveUserDeviceInfo(signInResult['account_id'], fcm_token, apn_token, device_info, installation_id)
+    if installation_id != None and device_info != None:
+        accRepo.saveUserDeviceInfo(signInResult['account_id'], fcm_token, apn_token, device_info, installation_id)
     return signInResult
 
 @app.get("/api/v1/token/verify/{token}")
