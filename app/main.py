@@ -132,11 +132,11 @@ def registration_validate_token(token):
 
 @app.post("/api/v1/auth/login")
 def login(
-    installation_id:Union[str, None] = Header(), 
-    device_info:Union[str, None] = Header(), 
     authorization:str = Header(), 
     username:str = Form(), 
     password: str = Form(),
+    installation_id:Union[str, None] = Header(default=None), 
+    device_info:Union[str, None] = Header(default=None), 
     fcm_token:Union[str,None] = Header(default=None), 
     apn_token:Union[str,None] = Header(default=None)
     ):
